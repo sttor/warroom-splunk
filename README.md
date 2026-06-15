@@ -26,9 +26,11 @@ WarRoom AI fixes this. It's an AI agent that lives in your Slack incident channe
 
 We built the backend in Python using FastAPI and the frontend in Next.js. The AI uses OpenAI's models. 
 
-Instead of generic search tools, we wrote custom API integrations for Splunk, Jira, and VirusTotal so the agent is fast and doesn't hallucinate. It connects to Slack using Socket Mode (WebSockets) so it can receive messages locally without needing public webhooks.
+**This project explicitly uses Splunk's AI capabilities and the Splunk MCP (Model Context Protocol) Server at runtime.** 
 
-## 🏗️ Architecture
+Instead of generic search tools, the AI Agent connects dynamically to the **Splunk MCP Server** to run real-time queries and parse threat intel natively. It connects to Slack using Socket Mode (WebSockets) so it can receive messages locally without needing public webhooks.
+
+## 🏗️ Core Architecture
 
 ```mermaid
 graph TD
@@ -55,6 +57,43 @@ graph TD
     O <--> J
     O <--> VT
 ```
+
+## 🧠 Splunk MCP & AI Capabilities
+
+WarRoom AI deeply integrates with Splunk MCP to give the LLM agent runtime access to your Splunk Enterprise logs and AI features.
+
+```mermaid
+graph TD
+    subgraph "WarRoom AI Orchestrator"
+        LLM[LLM Agent Core]
+        Tools[Tool Dispatcher]
+    end
+
+    subgraph "Splunk MCP Server Runtime"
+        MCP[Splunk MCP Interface]
+        SPL[run_splunk_search]
+        NBE[get_notable_events]
+        IDX[list_indexes]
+    end
+
+    subgraph "Splunk Enterprise"
+        SAI[Splunk AI Capabilities]
+        DB[(Splunk Indexers)]
+    end
+
+    LLM -->|Function Calling| Tools
+    Tools <-->|JSON-RPC| MCP
+    MCP --> SPL
+    MCP --> NBE
+    MCP --> IDX
+    SPL <--> SAI
+    SPL <--> DB
+```
+
+**Agent Tool Capabilities Fetched via MCP:**
+- `run_splunk_search`: The agent dynamically writes and executes complex SPL queries against Splunk data.
+- `get_notable_events`: The agent natively fetches notable security events and alerts.
+- `list_indexes`: The agent discovers what data is available to query before making assumptions.
 
 ## Getting Started
 
