@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/15/Splunk_logo.svg/1024px-Splunk_logo.svg.png" width="200" alt="Splunk Logo" />
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d5/Slack_icon_2019.svg/1024px-Slack_icon_2019.svg.png" width="80" alt="Slack Logo" />
+  <img src="https://www.vectorlogo.zone/logos/splunk/splunk-ar21.svg" height="60" alt="Splunk Logo" />
+  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <img src="https://www.vectorlogo.zone/logos/slack/slack-ar21.svg" height="60" alt="Slack Logo" />
 
   <h1>WarRoom AI</h1>
   <p><strong>An Autonomous AI-Powered Incident Response Slack App for Splunk</strong></p>
