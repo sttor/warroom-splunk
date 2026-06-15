@@ -58,6 +58,9 @@ graph TD
 
 ## Getting Started
 
+> **Connecting to Slack:** You will need to create a custom Slack App to use WarRoom AI. 
+> 👉 **[Read the Step-by-Step Slack Setup Guide here.](SLACK_SETUP.md)**
+
 **1. Setup Backend**
 ```bash
 cd backend
