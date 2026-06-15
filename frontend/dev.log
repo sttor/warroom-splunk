@@ -1,0 +1,72 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.9:3000
+✓ Ready in 507ms
+
+○ Compiling / ...
+The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width.
+ HEAD / 200 in 25.8s (next.js: 25.3s, application-code: 477ms)
+⨯ ./src/app/favicon.ico
+Processing image failed
+unable to decode image data
+
+Caused by:
+- failed to fill whole buffer
+
+
+ GET / 500 in 791ms (next.js: 668ms, application-code: 123ms)
+[browser] Uncaught Error: ./src/app/favicon.ico
+Processing image failed
+unable to decode image data
+
+Caused by:
+- failed to fill whole buffer
+
+
+[browser] ./src/app/favicon.ico
+Processing image failed
+unable to decode image data
+
+Caused by:
+- failed to fill whole buffer 
+[browser] ./src/app/favicon.ico
+Processing image failed
+unable to decode image data
+
+Caused by:
+- failed to fill whole buffer 
+[browser] ./src/app/favicon.ico
+Processing image failed
+unable to decode image data
+
+Caused by:
+- failed to fill whole buffer 
+✓ Compiled in 722ms
+○ Compiling /integrations ...
+⨯ ./package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+⨯ ./package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+ GET / 500 in 38.0s (next.js: 35.6s, application-code: 2.4s)
+ GET /integrations 500 in 45s (next.js: 45s, application-code: 13ms)
+[browser] Uncaught Error: ./package.json:1:1
+Error parsing package.json file
+package.json is not parseable: invalid JSON: EOF while parsing a value at line 1 column 0
+
+
+    at <unknown> (Error: ./package.json:1:1)
+    at <unknown> (Error: (./package.json:1:1)
+[?25h

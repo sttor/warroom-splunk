@@ -1,0 +1,33 @@
+WARNING:WarRoom_API:Frontend directory not found at /Users/raushan/Desktop/hackathon/warroom/backend/frontend
+INFO:     Started server process [26479]
+INFO:     Waiting for application startup.
+INFO:WarRoom_API:Starting WarRoom API...
+INFO:warroom.splunk_mcp:Running in DEMO mode – synthetic data will be used
+INFO:WarRoom_API:Connected to Splunk (or running in Demo Mode).
+INFO:     Application startup complete.
+ERROR:    [Errno 48] error while attempting to bind on address ('0.0.0.0', 8000): [errno 48] address already in use
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+TOP OF MAIN
+Initializing settings...
+Splunk cliWARNING:  StatReload detected changes in 'main.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [26588]
+WARNING:WarRoom_API:Frontend directory not found at /Users/raushan/Desktop/hackathon/warroom/frontend/out
+INFO:     Started server process [26632]
+INFO:     Waiting for application startup.
+INFO:WarRoom_API:Starting WarRoom API...
+INFO:warroom.splunk_mcp:Running in DEMO mode – synthetic data will be used
+INFO:WarRoom_API:Connected to Splunk (or running in Demo Mode).
+INFO:     Application startup complete.
+TOP OF MAIN
+Initializing settings...
+Splunk client initialized.
+INFO:     127.0.0.1:62090 - "HEAD /api/rooms/WAR-101 HTTP/1.1" 405 Method Not Allowed
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [26632]
+INFO:     Stopping reloader process [26585]

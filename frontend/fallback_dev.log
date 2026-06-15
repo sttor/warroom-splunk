@@ -1,0 +1,28 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+node:internal/modules/cjs/loader:1409
+  const err = new Error(message);
+              ^
+
+Error: Cannot find module '../lib/helpers/get-npx-command'
+Require stack:
+- /Users/raushan/Desktop/hackathon/warroom/frontend/node_modules/next/dist/cli/next-dev.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1409:15)
+    at /Users/raushan/Desktop/hackathon/warroom/frontend/node_modules/next/dist/server/require-hook.js:68:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1060:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1065:22)
+    at Function._load (node:internal/modules/cjs/loader:1214:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:234:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1495:12)
+    at mod.require (/Users/raushan/Desktop/hackathon/warroom/frontend/node_modules/next/dist/server/require-hook.js:79:28)
+    at require (node:internal/modules/helpers:135:16) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [
+    '/Users/raushan/Desktop/hackathon/warroom/frontend/node_modules/next/dist/cli/next-dev.js'
+  ]
+}
+
+Node.js v23.6.1

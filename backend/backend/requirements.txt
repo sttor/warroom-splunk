@@ -1,0 +1,22 @@
+# Backend
+fastapi==0.115.0
+uvicorn[standard]==0.30.0
+websockets==12.0
+python-dotenv==1.0.1
+pydantic==2.9.0
+httpx==0.27.0
+
+# Splunk
+splunk-sdk==2.0.2
+
+# MCP Client
+mcp==1.9.0
+
+# LLM Providers
+openai==1.52.0
+anthropic==0.37.0
+google-generativeai==0.8.0
+
+# Utilities
+python-dateutil==2.9.0
+uuid6==2024.7.10

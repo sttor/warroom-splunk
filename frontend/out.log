@@ -1,0 +1,7 @@
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3005
+- Network:       http://192.168.1.9:3005
+✓ Ready in 18.4min
+TypeError: setupDevBundler is not a function
+    at ignore-listed frames
+[?25h
