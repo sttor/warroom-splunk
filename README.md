@@ -95,6 +95,13 @@ graph TD
 - `get_notable_events`: The agent natively fetches notable security events and alerts.
 - `list_indexes`: The agent discovers what data is available to query before making assumptions.
 
+## 🔌 Plug-and-Play Integrations UI
+
+Configuring enterprise integrations shouldn't require manually editing config files. WarRoom AI includes a sleek, dedicated web dashboard to seamlessly configure your Splunk MCP Server, Jira credentials, and Slack Socket Mode tokens.
+
+![Integrations UI Dashboard](./integrations_ui.png)
+*(Above: The WarRoom Dashboard where analysts can securely connect the Splunk MCP Server and other tools to the AI Agent.)*
+
 ## Getting Started
 
 > **Connecting to Slack:** You will need to create a custom Slack App to use WarRoom AI. 
