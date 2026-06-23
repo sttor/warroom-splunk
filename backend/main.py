@@ -159,6 +159,9 @@ class ChatMessage(BaseModel):
 async def silent_chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
     """Ingests a message into the room's history without triggering an AI response.
     Useful for passively listening to Slack channels."""
+    if not chat.message or not chat.message.strip():
+        return {"status": "ignored", "reason": "empty message"}
+
     # Ensure room exists
     room = db.query(Room).filter(Room.id == chat.room_id).first()
     if not room:
@@ -177,6 +180,9 @@ async def silent_chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db))
 @app.post("/api/chat")
 async def chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
     """Production Chat endpoint. Handles history and tool execution."""
+    if not chat.message or not chat.message.strip():
+        return {"response": "I cannot process an empty message. Please provide details."}
+
     # Ensure room exists
     room = db.query(Room).filter(Room.id == chat.room_id).first()
     if not room:
