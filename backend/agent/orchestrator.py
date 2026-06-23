@@ -300,10 +300,25 @@ class IncidentCommander:
         splunk_status = "Connected" if "splunk" in self.connections else "Not connected. DO NOT hallucinate Splunk queries. If the user asks for Splunk data, tell them Splunk MCP is not configured."
         jira_status = "Connected (Native REST API)" if settings.jira_mcp_url and settings.jira_mcp_token else "Not connected. DO NOT try to read Jira tickets."
         
+        # Build Data Catalog Intelligence Layer
+        from agent.data_catalog import DATA_CATALOG
+        catalog_text = "### DATA CATALOG ROUTING INTELLIGENCE ###\n"
+        catalog_text += "You must consult this catalog to determine WHICH tools to use before acting.\n\n"
+        for source, config in DATA_CATALOG.items():
+            if source == "splunk" and "splunk" not in self.connections:
+                continue
+            if source == "jira" and (not settings.jira_mcp_url or not settings.jira_mcp_token):
+                continue
+            catalog_text += f"- **{source.upper()}**:\n"
+            catalog_text += f"  - Description: {config['description']}\n"
+            catalog_text += f"  - Best For: {', '.join(config['best_for'])}\n"
+            catalog_text += f"  - Instruction: {config['instructions']}\n\n"
+
         system_base = f"You are the WarRoom Incident Commander.\n" \
                       f"You lead a team of specialized parallel subagents (Splunk, VirusTotal, Jira). " \
                       f"CRITICAL: When investigating an incident, you MUST deploy your subagents CONCURRENTLY. If you need data from Splunk, VT, and Jira, invoke all their tools simultaneously in a single turn to parallelize the investigation. Do not wait for one tool to finish before calling another.\n" \
                       f"CRITICAL COMMUNICATION STYLE: Respond naturally like an elite human commander in a chat room. DO NOT use rigid bulleted lists like 'Actions performed'. Speak directly and decisively.\n\n" \
+                      f"{catalog_text}" \
                       f"FORMATTING RULES:\n" \
                       f"- When asked to generate an RCA (Root Cause Analysis), use a highly structured, professional incident report format. Include sections like: 🚨 Executive Summary, 🔍 Root Cause, ⏱️ Attack Timeline, 🛡️ Impact & Indicators, and 🛠️ Remediation.\n" \
                       f"- When outputting VirusTotal results, heavily decorate the output using Slack markdown to make it pop. Use *bold* for malicious counts, _italics_ for context, and emojis (🚨, ✅, ⚠️).\n\n" \
