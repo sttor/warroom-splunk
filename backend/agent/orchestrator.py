@@ -67,7 +67,7 @@ class MCPConnection:
         return result.content[0].text if result.content else ""
 
 
-class WarRoomAgent:
+class IncidentCommander:
     def __init__(self, room_id: str):
         self.room_id = room_id
         self.connections: Dict[str, MCPConnection] = {}
@@ -300,8 +300,10 @@ class WarRoomAgent:
         splunk_status = "Connected" if "splunk" in self.connections else "Not connected. DO NOT hallucinate Splunk queries. If the user asks for Splunk data, tell them Splunk MCP is not configured."
         jira_status = "Connected (Native REST API)" if settings.jira_mcp_url and settings.jira_mcp_token else "Not connected. DO NOT try to read Jira tickets."
         
-        system_base = f"You are WarRoom AI, an elite SOC analyst colleague.\n" \
-                      f"CRITICAL COMMUNICATION STYLE: Respond naturally like a human expert in a chat room. DO NOT use rigid bulleted lists like 'Actions performed' or 'Next recommended action'. Speak directly and precisely.\n\n" \
+        system_base = f"You are the WarRoom Incident Commander.\n" \
+                      f"You lead a team of specialized parallel subagents (Splunk, VirusTotal, Jira). " \
+                      f"CRITICAL: When investigating an incident, you MUST deploy your subagents CONCURRENTLY. If you need data from Splunk, VT, and Jira, invoke all their tools simultaneously in a single turn to parallelize the investigation. Do not wait for one tool to finish before calling another.\n" \
+                      f"CRITICAL COMMUNICATION STYLE: Respond naturally like an elite human commander in a chat room. DO NOT use rigid bulleted lists like 'Actions performed'. Speak directly and decisively.\n\n" \
                       f"FORMATTING RULES:\n" \
                       f"- When asked to generate an RCA (Root Cause Analysis), use a highly structured, professional incident report format. Include sections like: 🚨 Executive Summary, 🔍 Root Cause, ⏱️ Attack Timeline, 🛡️ Impact & Indicators, and 🛠️ Remediation.\n" \
                       f"- When outputting VirusTotal results, heavily decorate the output using Slack markdown to make it pop. Use *bold* for malicious counts, _italics_ for context, and emojis (🚨, ✅, ⚠️).\n\n" \
@@ -457,16 +459,14 @@ class WarRoomAgent:
                 self._save_message("assistant", final_text)
                 return final_text
 
-            # Execute tool calls
-            for tool_call in response_message.tool_calls:
+            # Execute tool calls concurrently
+            async def execute_tool(tool_call):
                 function_name = tool_call.function.name
                 arguments = json.loads(tool_call.function.arguments)
                 
-                logger.info(f"Executing tool: {function_name} with args {arguments}")
+                logger.info(f"SubAgent dispatched for: {function_name} with args {arguments}")
                 
-                # Route to appropriate MCP connection
                 prefix = function_name.split("__")[0]
-                
                 tool_result = "Error: Tool execution failed or unknown tool."
                 
                 if function_name == "add_to_incident_timeline":
@@ -487,12 +487,16 @@ class WarRoomAgent:
                     except Exception as e:
                         tool_result = f"Error executing tool {function_name}: {str(e)}"
                 
-                messages.append({
+                return {
                     "role": "tool",
                     "tool_call_id": tool_call.id,
                     "name": function_name,
                     "content": tool_result
-                })
+                }
+
+            # Map-Reduce: Dispatch all tools (subagents) at once and gather results
+            tool_results = await asyncio.gather(*(execute_tool(tc) for tc in response_message.tool_calls))
+            messages.extend(tool_results)
 
         final_msg = "Investigation timed out after maximum tool iterations."
         self._save_message("assistant", final_msg)

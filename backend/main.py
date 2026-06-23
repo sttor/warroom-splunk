@@ -207,11 +207,11 @@ async def chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
     history = db.query(Message).filter(Message.room_id == chat.room_id).order_by(Message.created_at.asc()).all()
     history_dicts = [{"role": m.role, "content": m.content} for m in history]
 
-    from agent.orchestrator import WarRoomAgent
+    from agent.orchestrator import IncidentCommander
     
     try:
         # Process through agent
-        agent = WarRoomAgent(room_id=chat.room_id)
+        agent = IncidentCommander(room_id=chat.room_id)
         reply = await agent.run(user_prompt=chat.message)
         await agent.close()
     except Exception as e:
