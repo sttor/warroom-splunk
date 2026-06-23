@@ -100,17 +100,43 @@ export default function InvestigationDetail() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-start justify-between space-y-2 mb-6">
         <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h2 className="text-3xl font-bold tracking-tight">{room.title}</h2>
-            <div className="flex items-center">
-              <div className={`w-2 h-2 rounded-full mr-2 ${room.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
-              <span className="text-sm font-medium text-muted-foreground capitalize">{room.status === 'active' ? 'Active' : 'Closed'}</span>
+          <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-2 text-foreground flex items-center gap-3">
+              {room.title}
+              <Badge variant={room.severity?.toLowerCase() === 'high' ? 'destructive' : room.severity?.toLowerCase() === 'medium' ? 'default' : 'secondary'} className="rounded-sm">
+                {room.severity || 'Medium'}
+              </Badge>
+              <Badge variant={room.status === 'Closed' ? 'secondary' : 'default'} className="rounded-sm">
+                {room.status || 'Open'}
+              </Badge>
+            </h1>
+            <p className="text-muted-foreground flex items-center gap-2 mb-2">
+              <Activity className="w-4 h-4" />
+              Source: {room.source || 'Web App'} • Opened {timeAgo(room.created_at)}
+            </p>
+            {room.description && (
+              <p className="text-sm text-slate-600 bg-slate-50 border p-3 rounded-md max-w-3xl mt-3 shadow-sm border-l-4 border-l-primary/60 italic">
+                &quot;{room.description}&quot;
+              </p>
+            )}
+            
+            <div className="flex flex-wrap items-center gap-4 mt-4">
+              {room.incident_commander && (
+                <div className="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm font-medium border border-blue-200">
+                  <Target className="w-4 h-4" />
+                  IC: {room.incident_commander.replace(/[<@>]/g, '')}
+                </div>
+              )}
+              {room.collaborators && room.collaborators.length > 0 && (
+                <div className="flex items-center gap-2 bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full text-sm font-medium border border-slate-200">
+                  <User className="w-4 h-4" />
+                  {room.collaborators.length} Collaborator{room.collaborators.length !== 1 ? 's' : ''}
+                </div>
+              )}
             </div>
-            {renderSeverityBadge(room.severity)}
           </div>
-          <p className="text-sm text-muted-foreground flex items-center font-medium">
-            Created {timeAgo(room.created_at)} <span className="mx-2">•</span> Channel: #inc-{room.id.substring(0,5)}
-          </p>
+          </div>
         </div>
 
         <div className="flex items-center space-x-6">

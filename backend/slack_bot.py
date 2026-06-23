@@ -22,11 +22,28 @@ def handle_app_mention_events(body, say):
         channel_info = app.client.conversations_info(channel=channel_id)
         channel_name = channel_info["channel"]["name"]
         room_title = f"#{channel_name}"
+        room_description = channel_info["channel"].get("purpose", {}).get("value")
+        creator_id = channel_info["channel"].get("creator")
+        incident_commander = f"<@{creator_id}>" if creator_id else None
+        
+        # Get collaborators
+        members_resp = app.client.conversations_members(channel=channel_id)
+        collaborators = [f"<@{m}>" for m in members_resp.get("members", [])]
     except Exception:
         room_title = None
+        room_description = None
+        incident_commander = None
+        collaborators = []
         
     try:
-        payload = {"message": clean_text, "room_id": f"slack_channel_{channel_id}", "room_title": room_title}
+        payload = {
+            "message": clean_text, 
+            "room_id": f"slack_channel_{channel_id}", 
+            "room_title": room_title,
+            "room_description": room_description,
+            "incident_commander": incident_commander,
+            "collaborators": collaborators
+        }
         response = requests.post(WARROOM_API_URL, json=payload, timeout=120)
         
         if response.status_code == 200:
@@ -55,8 +72,18 @@ def handle_all_messages(message, say):
         channel_info = app.client.conversations_info(channel=channel_id)
         channel_name = channel_info["channel"]["name"]
         room_title = f"#{channel_name}"
+        room_description = channel_info["channel"].get("purpose", {}).get("value")
+        creator_id = channel_info["channel"].get("creator")
+        incident_commander = f"<@{creator_id}>" if creator_id else None
+        
+        # Get collaborators
+        members_resp = app.client.conversations_members(channel=channel_id)
+        collaborators = [f"<@{m}>" for m in members_resp.get("members", [])]
     except Exception:
         room_title = None
+        room_description = None
+        incident_commander = None
+        collaborators = []
 
     if channel_type == "im":
         # Direct Message: Bot should actively reply
@@ -81,7 +108,10 @@ def handle_all_messages(message, say):
             "message": text, 
             "room_id": room_id,
             "sender_name": f"<@{user}>",
-            "room_title": room_title
+            "room_title": room_title,
+            "room_description": room_description,
+            "incident_commander": incident_commander,
+            "collaborators": collaborators
         }
         try:
             requests.post(WARROOM_API_URL + "/silent", json=payload, timeout=5)

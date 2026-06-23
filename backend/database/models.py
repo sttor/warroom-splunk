@@ -24,14 +24,19 @@ class Room(Base):
     id = Column(String, primary_key=True, index=True)
     title = Column(String, default="New Investigation")
     source = Column(String, default="Web App") # e.g. "Web App", "Slack"
-    severity = Column(String, default="P3 - Medium") # e.g. "P1 - Critical"
-    participants = Column(JSON, default=list) # List of participant names
-    evidence = Column(JSON, default=list) # List of pinned indicators/evidence
-    timeline = Column(JSON, default=list) # Chronological events for RCA
-    created_at = Column(DateTime, default=datetime.utcnow)
-    status = Column(String, default="active") # active, closed
+    severity = Column(String, default="Medium")
+    status = Column(String, default="Open")
+    timeline = Column(JSON, default=list) # List of important events
     
+    # Slack Metadata
+    description = Column(String, nullable=True)
+    incident_commander = Column(String, nullable=True)
+    collaborators = Column(JSON, default=list)
+
     # Relationships
+    evidence = Column(JSON, default=list) # List of pinned indicators/evidence
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
     messages = relationship("Message", back_populates="room")
     rca = relationship("RCA", back_populates="room", uselist=False)
 

@@ -155,6 +155,9 @@ class ChatMessage(BaseModel):
     message: str
     sender_name: Optional[str] = "User"
     room_title: Optional[str] = None
+    room_description: Optional[str] = None
+    incident_commander: Optional[str] = None
+    collaborators: Optional[list] = None
 
 @app.post("/api/chat/silent")
 async def silent_chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
@@ -170,9 +173,30 @@ async def silent_chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db))
         if not title:
             display_name = chat.room_id.replace('slack_channel_', '#').replace('slack_thread_', 'Thread ')
             title = f"Slack Investigation ({display_name})"
-        room = Room(id=chat.room_id, title=title, source="Slack")
+        room = Room(
+            id=chat.room_id, 
+            title=title, 
+            source="Slack",
+            description=chat.room_description,
+            incident_commander=chat.incident_commander,
+            collaborators=chat.collaborators or []
+        )
         db.add(room)
         db.commit()
+    else:
+        # Update metadata if provided
+        updated = False
+        if chat.room_description and room.description != chat.room_description:
+            room.description = chat.room_description
+            updated = True
+        if chat.incident_commander and room.incident_commander != chat.incident_commander:
+            room.incident_commander = chat.incident_commander
+            updated = True
+        if chat.collaborators is not None and room.collaborators != chat.collaborators:
+            room.collaborators = chat.collaborators
+            updated = True
+        if updated:
+            db.commit()
     
     # Save the user's message silently
     msg_content = f"{chat.sender_name}: {chat.message}" if chat.sender_name != "User" else chat.message
@@ -194,11 +218,31 @@ async def chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
         if chat.room_id.startswith("slack_") and not chat.room_title:
             display_name = chat.room_id.replace('slack_channel_', '#').replace('slack_thread_', 'Thread ').replace('slack_dm_', '@')
             title = f"Slack Investigation ({display_name})"
-        new_room = Room(id=chat.room_id, title=title, source="Slack" if chat.room_id.startswith("slack_") else "Web App")
+        new_room = Room(
+            id=chat.room_id, 
+            title=title, 
+            source="Slack" if chat.room_id.startswith("slack_") else "Web App",
+            description=chat.room_description,
+            incident_commander=chat.incident_commander,
+            collaborators=chat.collaborators or []
+        )
         db.add(new_room)
         db.commit()
-        
-    # Save user message
+        room = new_room
+    else:
+        # Update metadata if provided
+        updated = False
+        if chat.room_description and room.description != chat.room_description:
+            room.description = chat.room_description
+            updated = True
+        if chat.incident_commander and room.incident_commander != chat.incident_commander:
+            room.incident_commander = chat.incident_commander
+            updated = True
+        if chat.collaborators is not None and room.collaborators != chat.collaborators:
+            room.collaborators = chat.collaborators
+            updated = True
+        if updated:
+            db.commit()  # Save user message
     user_msg = Message(room_id=chat.room_id, role="user", content=chat.message)
     db.add(user_msg)
     db.commit()
