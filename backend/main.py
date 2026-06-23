@@ -213,7 +213,9 @@ async def chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
 
     # Ensure room exists
     room = db.query(Room).filter(Room.id == chat.room_id).first()
+    is_new_incident = False
     if not room:
+        is_new_incident = True
         title = chat.room_title or "Test Web Chat"
         if chat.room_id.startswith("slack_") and not chat.room_title:
             display_name = chat.room_id.replace('slack_channel_', '#').replace('slack_thread_', 'Thread ').replace('slack_dm_', '@')
@@ -255,7 +257,7 @@ async def chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
     
     try:
         # Process through agent
-        agent = IncidentCommander(room_id=chat.room_id)
+        agent = IncidentCommander(room_id=chat.room_id, is_new_incident=is_new_incident)
         reply = await agent.run(user_prompt=chat.message)
         await agent.close()
     except Exception as e:

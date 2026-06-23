@@ -70,8 +70,9 @@ class MCPConnection:
 GLOBAL_DYNAMIC_CATALOG_CACHE = None
 
 class IncidentCommander:
-    def __init__(self, room_id: str):
+    def __init__(self, room_id: str, is_new_incident: bool = False):
         self.room_id = room_id
+        self.is_new_incident = is_new_incident
         self.connections: Dict[str, MCPConnection] = {}
         self.dynamic_catalog: str = ""
         self.model = settings.ollama_model
@@ -175,6 +176,10 @@ class IncidentCommander:
     async def _generate_dynamic_catalog(self):
         """Uses LLM to automatically deduce capabilities from connected MCP tool schemas."""
         global GLOBAL_DYNAMIC_CATALOG_CACHE
+        if self.is_new_incident:
+            logger.info("New incident detected. Invalidating Dynamic Catalog Cache to refresh schemas.")
+            GLOBAL_DYNAMIC_CATALOG_CACHE = None
+            
         if GLOBAL_DYNAMIC_CATALOG_CACHE:
             self.dynamic_catalog = GLOBAL_DYNAMIC_CATALOG_CACHE
             return
