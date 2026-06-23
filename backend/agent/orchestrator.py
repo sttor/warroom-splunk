@@ -130,6 +130,17 @@ class WarRoomAgent:
         finally:
             db.close()
 
+    def _get_full_incident_transcript(self) -> str:
+        db = SessionLocal()
+        try:
+            messages = db.query(Message).filter(Message.room_id == self.room_id).order_by(Message.created_at.asc()).all()
+            if not messages:
+                return "No historical messages found for this incident."
+            transcript = "\n".join([f"[{m.created_at.strftime('%Y-%m-%d %H:%M:%S')}] {m.role.upper()}: {m.content}" for m in messages])
+            return f"--- FULL INCIDENT TRANSCRIPT ---\n{transcript}\n--- END OF TRANSCRIPT ---"
+        finally:
+            db.close()
+
     def _search_past_incidents(self, keyword: str) -> str:
         db = SessionLocal()
         try:
@@ -313,6 +324,18 @@ class WarRoomAgent:
             {
                 "type": "function",
                 "function": {
+                    "name": "get_full_incident_transcript",
+                    "description": "Fetches the full, raw historical chat transcript for the current incident room. Use this when asked to generate an RCA (Root Cause Analysis) so you have the entire context.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {},
+                        "required": []
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
                     "name": "add_to_incident_timeline",
                     "description": "Permanently saves an important discovery, fact, or IoC to the incident timeline so it is not forgotten.",
                     "parameters": {
@@ -448,6 +471,8 @@ class WarRoomAgent:
                 
                 if function_name == "add_to_incident_timeline":
                     tool_result = self._add_to_timeline(arguments.get("event", ""))
+                elif function_name == "get_full_incident_transcript":
+                    tool_result = self._get_full_incident_transcript()
                 elif function_name == "search_past_incidents":
                     tool_result = self._search_past_incidents(arguments.get("keyword", ""))
                 elif function_name == "check_virustotal":
