@@ -71,8 +71,80 @@ class IncidentCommander:
     def __init__(self, room_id: str):
         self.room_id = room_id
         self.connections: Dict[str, MCPConnection] = {}
-        self.tools_cache: List[dict] = []
+        self.dynamic_catalog: str = ""
         self.model = settings.ollama_model
+        
+        self.native_tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_full_incident_transcript",
+                    "description": "Fetches the full, raw historical chat transcript for the current incident room. Use this when asked to generate an RCA (Root Cause Analysis) so you have the entire context.",
+                    "parameters": {"type": "object", "properties": {}, "required": []}
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "add_to_incident_timeline",
+                    "description": "Permanently saves an important discovery, fact, or IoC to the incident timeline so it is not forgotten.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"event": {"type": "string", "description": "The description of the event or fact to save."}},
+                        "required": ["event"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_past_incidents",
+                    "description": "Searches the database for similar past incidents, alerts, or tactics based on a keyword.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"keyword": {"type": "string", "description": "The tactic, technique, or keyword to search for (e.g. 'brute force')."}},
+                        "required": ["keyword"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "check_virustotal",
+                    "description": "Checks an IP address or domain against VirusTotal threat intelligence to see if it is malicious.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"indicator": {"type": "string", "description": "The IP address or domain name to scan."}},
+                        "required": ["indicator"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "get_jira_issue",
+                    "description": "Fetches the details (summary, description, status) of a specific Jira ticket by ID (e.g. SEC-123).",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"issue_id": {"type": "string", "description": "The Jira ticket ID"}},
+                        "required": ["issue_id"]
+                    }
+                }
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "search_jira_issues",
+                    "description": "Searches Jira tickets using JQL.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {"jql": {"type": "string", "description": "The JQL query"}},
+                        "required": ["jql"]
+                    }
+                }
+            }
+        ]
+        self.tools_cache: List[dict] = list(self.native_tools)
 
     async def initialize_connections(self):
         """Dynamically loads MCP connections based on config."""
@@ -94,6 +166,44 @@ class IncidentCommander:
         # Jira is now handled purely natively via REST API using native tools!
 
         # Future integrations (Elastic, SumoLogic) would be added here
+        
+        # Self-Discover Capabilities
+        await self._generate_dynamic_catalog()
+
+    async def _generate_dynamic_catalog(self):
+        """Uses LLM to automatically deduce capabilities from connected MCP tool schemas."""
+        try:
+            logger.info("Auto-discovering Data Catalog capabilities from tool schemas...")
+            schemas = json.dumps([t["function"] for t in self.tools_cache], indent=2)
+            
+            prompt = f"""You are the WarRoom Data Cataloger. 
+Analyze these raw MCP tool schemas and deduce what data integration they belong to and what they are best used for.
+Return a concise summary mapping the integration names to their purpose (e.g. 'Splunk: Best for X, Y, Z. Jira: Best for A, B.'). 
+Do not use markdown blocks. Return plain text instructions for an Incident Commander on when to use which tools.
+
+Schemas:
+{schemas[:4000]} # Truncated to avoid token bloat
+"""
+            
+            model_str = self.model
+            api_base_url = settings.llm_api_base
+            if api_base_url and ".azure.com" in api_base_url:
+                if not model_str.startswith("azure/"):
+                    model_str = f"azure/{model_str}"
+                api_base_url = api_base_url.replace("openai/v1/", "").rstrip("/")
+                
+            response = completion(
+                model=model_str,
+                messages=[{"role": "user", "content": prompt}],
+                api_key=settings.llm_api_key or "mock",
+                api_base=api_base_url if api_base_url else None,
+                api_version="2024-02-15-preview" if "azure/" in model_str else None,
+            )
+            self.dynamic_catalog = response.choices[0].message.content
+            logger.info(f"Generated Dynamic Catalog:\n{self.dynamic_catalog}")
+        except Exception as e:
+            logger.error(f"Failed to generate dynamic catalog: {e}")
+            self.dynamic_catalog = "Dynamic Cataloger failed to analyze schemas."
 
     async def close(self):
         for conn in self.connections.values():
@@ -300,19 +410,9 @@ class IncidentCommander:
         splunk_status = "Connected" if "splunk" in self.connections else "Not connected. DO NOT hallucinate Splunk queries. If the user asks for Splunk data, tell them Splunk MCP is not configured."
         jira_status = "Connected (Native REST API)" if settings.jira_mcp_url and settings.jira_mcp_token else "Not connected. DO NOT try to read Jira tickets."
         
-        # Build Data Catalog Intelligence Layer
-        from agent.data_catalog import DATA_CATALOG
-        catalog_text = "### DATA CATALOG ROUTING INTELLIGENCE ###\n"
-        catalog_text += "You must consult this catalog to determine WHICH tools to use before acting.\n\n"
-        for source, config in DATA_CATALOG.items():
-            if source == "splunk" and "splunk" not in self.connections:
-                continue
-            if source == "jira" and (not settings.jira_mcp_url or not settings.jira_mcp_token):
-                continue
-            catalog_text += f"- **{source.upper()}**:\n"
-            catalog_text += f"  - Description: {config['description']}\n"
-            catalog_text += f"  - Best For: {', '.join(config['best_for'])}\n"
-            catalog_text += f"  - Instruction: {config['instructions']}\n\n"
+        catalog_text = "### SELF-DISCOVERED DATA CATALOG INTELLIGENCE ###\n"
+        catalog_text += "You must consult this auto-generated catalog to determine WHICH tools to use before acting.\n"
+        catalog_text += f"{self.dynamic_catalog}\n\n"
 
         system_base = f"You are the WarRoom Incident Commander.\n" \
                       f"You lead a team of specialized parallel subagents (Splunk, VirusTotal, Jira). " \
@@ -337,107 +437,8 @@ class IncidentCommander:
 
         messages.extend(self._get_history())
         
-        native_tools = [
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_full_incident_transcript",
-                    "description": "Fetches the full, raw historical chat transcript for the current incident room. Use this when asked to generate an RCA (Root Cause Analysis) so you have the entire context.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {},
-                        "required": []
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "add_to_incident_timeline",
-                    "description": "Permanently saves an important discovery, fact, or IoC to the incident timeline so it is not forgotten.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "event": {
-                                "type": "string",
-                                "description": "The description of the event or fact to save."
-                            }
-                        },
-                        "required": ["event"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_past_incidents",
-                    "description": "Searches the database for similar past incidents, alerts, or tactics based on a keyword.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "keyword": {
-                                "type": "string",
-                                "description": "The tactic, technique, or keyword to search for (e.g. 'brute force', 'tor exit node')."
-                            }
-                        },
-                        "required": ["keyword"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "check_virustotal",
-                    "description": "Checks an IP address or domain against VirusTotal threat intelligence to see if it is malicious.",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "indicator": {
-                                "type": "string",
-                                "description": "The IP address or domain name to scan."
-                            }
-                        },
-                        "required": ["indicator"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "get_jira_issue",
-                    "description": "Fetches the details (summary, description, status) of a specific Jira ticket by ID (e.g. SEC-123).",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "issue_id": {
-                                "type": "string",
-                                "description": "The Jira ticket ID (e.g. SEC-123)"
-                            }
-                        },
-                        "required": ["issue_id"]
-                    }
-                }
-            },
-            {
-                "type": "function",
-                "function": {
-                    "name": "search_jira_issues",
-                    "description": "Searches Jira tickets using JQL (Jira Query Language).",
-                    "parameters": {
-                        "type": "object",
-                        "properties": {
-                            "jql": {
-                                "type": "string",
-                                "description": "The JQL query (e.g. project = SEC AND status = 'In Progress')"
-                            }
-                        },
-                        "required": ["jql"]
-                    }
-                }
-            }
-        ]
-        active_tools = self.tools_cache + native_tools if self.tools_cache else native_tools
-
+        active_tools = self.tools_cache
+        
         max_iterations = 5
         for _ in range(max_iterations):
             try:
