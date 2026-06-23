@@ -30,33 +30,67 @@ We built the backend in Python using FastAPI and the frontend in Next.js. The AI
 
 Instead of generic search tools, the AI Agent connects dynamically to the **Splunk MCP Server** to run real-time queries and parse threat intel natively. It connects to Slack using Socket Mode (WebSockets) so it can receive messages locally without needing public webhooks.
 
-## 🏗️ Core Architecture
+## 🏗️ Core Architecture (Multi-Agent Parallelization)
+
+WarRoom AI uses a **Map-Reduce / Parallel Subagent** architecture. Instead of relying on a single linear chatbot, the Incident Commander agent assesses the situation and instantly spins up isolated, parallel subagents for each connected datastore. 
 
 ```mermaid
 graph TD
-    subgraph "Slack"
-        S[Channel / DM]
+    subgraph "Slack / Dashboard"
+        S[User Message]
     end
 
-    subgraph "Backend (FastAPI)"
-        B[Socket Mode]
-        O[AI Agent]
-        DB[(Database)]
+    subgraph "Backend Orchestrator"
+        IC[Incident Commander]
+        DC[Data Cataloger]
     end
 
-    subgraph "Tools"
-        SP[Splunk]
-        J[Jira]
-        VT[VirusTotal]
+    subgraph "Parallel Subagents (asyncio.gather)"
+        SA1[Splunk Subagent]
+        SA2[VirusTotal Subagent]
+        SA3[Jira Subagent]
     end
 
-    S <--> B
-    B --> O
-    O <--> DB
-    O <--> SP
-    O <--> J
-    O <--> VT
+    S --> IC
+    IC <-->|Consults for Routing| DC
+    IC -->|Dispatches Concurrently| SA1
+    IC -->|Dispatches Concurrently| SA2
+    IC -->|Dispatches Concurrently| SA3
+    SA1 -->|Findings| IC
+    SA2 -->|Findings| IC
+    SA3 -->|Findings| IC
 ```
+
+## 🗂️ Data Cataloger Intelligence Layer
+
+As WarRoom AI scales to support dozens of data sources and Threat Intel feeds, it needs to intelligently route queries without wasting API calls or hallucinating queries against the wrong systems.
+
+We implemented a **Self-Discovering Data Cataloger**.
+
+```mermaid
+graph TD
+    subgraph "Startup & Initialization"
+        MCP[MCP Connections Initialize]
+        LLM[Cataloger LLM Subroutine]
+        CACHE[(Global Catalog Cache)]
+    end
+
+    subgraph "Runtime Incident"
+        IC[Incident Commander Prompt]
+        Slack[New Slack Message]
+    end
+
+    MCP -->|Sends Raw JSON Schemas for all tools| LLM
+    LLM -->|Deduces Capabilities & Best Use Cases| CACHE
+    Slack --> IC
+    CACHE -->|Injects Routing Profile| IC
+```
+
+**How it works:**
+1. When the server boots up, the Cataloger auto-fetches the raw JSON schemas of *every* connected tool (Splunk, VirusTotal, Jira).
+2. A fast LLM subroutine analyzes the schemas and dynamically deduces what each system is built for (e.g., "Splunk is best for lateral movement. VirusTotal is for hashes.").
+3. It builds a highly optimized "Routing Profile" and caches it globally.
+4. When a user asks a question, this pre-knowledge profile is injected into the Incident Commander, allowing it to instantly and accurately route tasks to the correct subagent with zero latency.
 
 ## 🧠 Splunk MCP & AI Capabilities
 
