@@ -154,6 +154,7 @@ class ChatMessage(BaseModel):
     room_id: str
     message: str
     sender_name: Optional[str] = "User"
+    room_title: Optional[str] = None
 
 @app.post("/api/chat/silent")
 async def silent_chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
@@ -165,8 +166,11 @@ async def silent_chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db))
     # Ensure room exists
     room = db.query(Room).filter(Room.id == chat.room_id).first()
     if not room:
-        display_name = chat.room_id.replace('slack_channel_', '#').replace('slack_thread_', 'Thread ')
-        room = Room(id=chat.room_id, title=f"Slack Investigation ({display_name})", source="Slack")
+        title = chat.room_title
+        if not title:
+            display_name = chat.room_id.replace('slack_channel_', '#').replace('slack_thread_', 'Thread ')
+            title = f"Slack Investigation ({display_name})"
+        room = Room(id=chat.room_id, title=title, source="Slack")
         db.add(room)
         db.commit()
     
@@ -186,8 +190,8 @@ async def chat_endpoint(chat: ChatMessage, db: Session = Depends(get_db)):
     # Ensure room exists
     room = db.query(Room).filter(Room.id == chat.room_id).first()
     if not room:
-        title = "Test Web Chat"
-        if chat.room_id.startswith("slack_"):
+        title = chat.room_title or "Test Web Chat"
+        if chat.room_id.startswith("slack_") and not chat.room_title:
             display_name = chat.room_id.replace('slack_channel_', '#').replace('slack_thread_', 'Thread ').replace('slack_dm_', '@')
             title = f"Slack Investigation ({display_name})"
         new_room = Room(id=chat.room_id, title=title, source="Slack" if chat.room_id.startswith("slack_") else "Web App")

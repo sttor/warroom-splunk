@@ -19,7 +19,14 @@ def handle_app_mention_events(body, say):
     print(f"\n[RECEIVE - Mention] From Channel {channel_id}: {clean_text}")
     
     try:
-        payload = {"message": clean_text, "room_id": f"slack_thread_{thread_ts}"}
+        channel_info = app.client.conversations_info(channel=channel_id)
+        channel_name = channel_info["channel"]["name"]
+        room_title = f"#{channel_name}"
+    except Exception:
+        room_title = None
+        
+    try:
+        payload = {"message": clean_text, "room_id": f"slack_channel_{channel_id}", "room_title": room_title}
         response = requests.post(WARROOM_API_URL, json=payload, timeout=120)
         
         if response.status_code == 200:
@@ -44,10 +51,17 @@ def handle_all_messages(message, say):
     if message.get("bot_id"):
         return
 
+    try:
+        channel_info = app.client.conversations_info(channel=channel_id)
+        channel_name = channel_info["channel"]["name"]
+        room_title = f"#{channel_name}"
+    except Exception:
+        room_title = None
+
     if channel_type == "im":
         # Direct Message: Bot should actively reply
         print(f"\n[RECEIVE - DM] From User {user}: {text}")
-        payload = {"message": text, "room_id": f"slack_dm_{channel_id}"}
+        payload = {"message": text, "room_id": f"slack_dm_{channel_id}", "room_title": "Slack DM"}
         try:
             response = requests.post(WARROOM_API_URL, json=payload, timeout=120)
             if response.status_code == 200:
@@ -60,13 +74,14 @@ def handle_all_messages(message, say):
             say(f"Connection Error: {str(e)}")
     else:
         # Public/Private Channel Message: Bot should silently ingest for context/RCA
-        room_id = f"slack_thread_{thread_ts}" if thread_ts else f"slack_channel_{channel_id}"
+        room_id = f"slack_channel_{channel_id}"
         
         print(f"\n[RECEIVE - Silent Channel] From User {user} in {channel_id}: {text}")
         payload = {
             "message": text, 
             "room_id": room_id,
-            "sender_name": f"<@{user}>"
+            "sender_name": f"<@{user}>",
+            "room_title": room_title
         }
         try:
             requests.post(WARROOM_API_URL + "/silent", json=payload, timeout=5)
