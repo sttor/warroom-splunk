@@ -67,6 +67,8 @@ class MCPConnection:
         return result.content[0].text if result.content else ""
 
 
+GLOBAL_DYNAMIC_CATALOG_CACHE = None
+
 class IncidentCommander:
     def __init__(self, room_id: str):
         self.room_id = room_id
@@ -172,6 +174,11 @@ class IncidentCommander:
 
     async def _generate_dynamic_catalog(self):
         """Uses LLM to automatically deduce capabilities from connected MCP tool schemas."""
+        global GLOBAL_DYNAMIC_CATALOG_CACHE
+        if GLOBAL_DYNAMIC_CATALOG_CACHE:
+            self.dynamic_catalog = GLOBAL_DYNAMIC_CATALOG_CACHE
+            return
+
         try:
             logger.info("Auto-discovering Data Catalog capabilities from tool schemas...")
             schemas = json.dumps([t["function"] for t in self.tools_cache], indent=2)
@@ -200,6 +207,7 @@ Schemas:
                 api_version="2024-02-15-preview" if "azure/" in model_str else None,
             )
             self.dynamic_catalog = response.choices[0].message.content
+            GLOBAL_DYNAMIC_CATALOG_CACHE = self.dynamic_catalog
             logger.info(f"Generated Dynamic Catalog:\n{self.dynamic_catalog}")
         except Exception as e:
             logger.error(f"Failed to generate dynamic catalog: {e}")
